@@ -34,6 +34,6 @@ Redis Enterprise operator -> RedisEnterpriseCluster -> RedisEnterpriseDatabase -
 
 ## Load Tests
 
-- Start with `make load-session` to isolate RAM API and Redis Enterprise behavior.
+- Start with `make load-working-memory` to isolate RAM API and Redis Enterprise behavior.
 - Run search and promotion profiles separately.
 - Run the load generator inside the same private network for customer-scale tests rather than through a workstation port-forward.

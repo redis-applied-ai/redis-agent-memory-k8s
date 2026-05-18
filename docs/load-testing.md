@@ -2,6 +2,13 @@
 
 One Locust user maps to one RAM session. Each user keeps one `sessionId`, writes session events, reads that session, and can optionally search long-term memory.
 
+In RAM, the working-memory path is the session-memory API:
+
+```text
+POST /v1/stores/{storeId}/session-memory/events
+GET  /v1/stores/{storeId}/session-memory/{sessionId}
+```
+
 ## Setup
 
 Use the root [README](../README.md) as the setup source of truth. After `make up` succeeds, keep a port-forward open:
@@ -29,14 +36,18 @@ LOCUST_DURATION=10m
 Override them per run:
 
 ```sh
-LOCUST_USERS=500 LOCUST_SPAWN_RATE=25 LOCUST_DURATION=15m make load-session
+LOCUST_USERS=500 LOCUST_SPAWN_RATE=25 LOCUST_DURATION=15m make load-working-memory
 ```
 
 ## Profiles
 
-`make load-session`
+`make load-working-memory`
 
-Scales the RAM worker to zero and runs session write/read traffic only. This is the clean RAM API plus Redis Enterprise baseline because it avoids worker promotion calls to the model provider.
+Scales the RAM worker to zero and runs session write/read traffic only. This is the clean RAM API plus Redis Enterprise baseline because it avoids long-term memory search and worker promotion calls to the model provider.
+
+`make load-working-memory-ui`
+
+Scales the RAM worker to zero and starts the Locust web UI at `http://127.0.0.1:8089`. Open exactly that HTTP URL; Locust does not serve HTTPS. The RAM host is prefilled as `http://127.0.0.1:9000`; choose the user count and spawn rate in the UI, then start the test.
 
 `make load-search`
 
@@ -50,6 +61,8 @@ make load-search
 `make load-promotion`
 
 Scales the worker back on and runs write/read traffic while background promotion jobs are processed.
+
+The working-memory and search profiles leave the worker scaled to zero. A large write-heavy run can leave promotion jobs queued in Redis Streams; reset the stack or intentionally run the promotion profile before comparing worker behavior.
 
 ## Results
 

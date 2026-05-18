@@ -99,6 +99,8 @@ make port-forward    # Expose RAM at http://127.0.0.1:9000
 make smoke-session   # Health plus session write/read only
 make smoke           # Full smoke test, including long-term memory/model calls
 make logs            # RAM server and worker logs
+make load-working-memory     # Headless Locust test for working/session memory
+make load-working-memory-ui  # Locust UI for working/session memory at http://127.0.0.1:8089
 make harden          # Apply RAM PDBs and ServiceMonitor when supported
 make down            # Uninstall RAM and Redis Enterprise resources
 make delete-cluster  # Delete the whole kind cluster
@@ -134,19 +136,36 @@ python -m venv .venv
 pip install -r locust/requirements.txt
 ```
 
-Run the API/Redis baseline first:
+Working memory is RAM session memory. The working-memory load profile only writes and reads these API paths:
 
-```sh
-make load-session
+```text
+POST /v1/stores/{storeId}/session-memory/events
+GET  /v1/stores/{storeId}/session-memory/{sessionId}
 ```
 
-Search and promotion are separate because they make model-backed calls:
+Keep `make port-forward` running in another terminal, then run the headless working-memory test:
+
+```sh
+make load-working-memory
+```
+
+Or use the Locust UI:
+
+```sh
+make load-working-memory-ui
+```
+
+Open exactly `http://127.0.0.1:8089`, enter user count and spawn rate, and start the test. Locust serves plain HTTP locally; `https://127.0.0.1:8089` will fail. The RAM host is prefilled as `http://127.0.0.1:9000`.
+
+Search and promotion are separate because they include long-term memory or model-backed worker behavior:
 
 ```sh
 make seed-ltm
 make load-search
 make load-promotion
 ```
+
+The working-memory and search profiles scale the RAM worker to zero so writes are not promoted during the test. Promotion jobs can backlog in Redis Streams during a large working-memory run; reset the stack or intentionally run `make load-promotion` when you want to measure worker processing.
 
 Details are in [docs/load-testing.md](./docs/load-testing.md).
 

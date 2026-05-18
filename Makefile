@@ -5,10 +5,10 @@ export
 
 .DEFAULT_GOAL := help
 
-.PHONY: help up harden status redis-status logs port-forward smoke smoke-session seed-ltm load-session load-search load-promotion promotion-on promotion-off verify down delete-cluster
+.PHONY: help up harden status redis-status logs port-forward smoke smoke-session seed-ltm load-working-memory load-working-memory-ui load-search load-promotion promotion-on promotion-off verify down delete-cluster
 
 help:
-	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_-]+:.*## / {printf "%-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_-]+:.*## / {printf "%-24s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 up: ## Create/reuse kind, install Redis Enterprise, install RAM
 	./scripts/up.sh
@@ -37,9 +37,13 @@ smoke-session: ## Run health and session-memory smoke test only
 seed-ltm: ## Seed long-term memory for search load tests
 	./scripts/seed-long-term-memory.sh --count $${RAM_SEED_COUNT:-100}
 
-load-session: ## Run API/Redis load baseline with worker scaled to zero
+load-working-memory: ## Run working/session memory load with worker scaled to zero
 	./scripts/worker.sh off
-	./locust/run-local.sh --profile session
+	./locust/run-local.sh --profile working-memory
+
+load-working-memory-ui: ## Open Locust UI for working/session memory load
+	./scripts/worker.sh off
+	./locust/run-local.sh --profile working-memory --ui
 
 load-search: ## Run session plus long-term search load profile
 	./scripts/worker.sh off
