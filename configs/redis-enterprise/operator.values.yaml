@@ -1,0 +1,29 @@
+admission:
+  limitToNamespace: true
+
+cluster:
+  create: true
+  name: rec
+  waitForReady: false
+  deletePVCsOnUninstall: true
+  timeout: 1200
+  spec:
+    nodes: 3
+    persistentSpec:
+      enabled: true
+      volumeSize: 10Gi
+    redisEnterpriseNodeResources:
+      requests:
+        cpu: 500m
+        memory: 2Gi
+      limits:
+        cpu: "2"
+        memory: 3Gi
+    bootstrapperResources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+    uiServiceType: ClusterIP

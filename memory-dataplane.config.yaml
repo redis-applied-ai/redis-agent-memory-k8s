@@ -1,0 +1,81 @@
+server:
+  read_timeout: 30s
+  write_timeout: 30s
+  timeout: 30s
+
+license:
+  license_path: /etc/redis-agent-memory/license
+
+default_extraction_strategy: instruct
+
+client_pool:
+  enable: true
+  max_size: 1000
+  max_retries: 10
+  client_acquisition_timeout_ms: 2000
+
+background_jobs:
+  redis_streams:
+    enabled: true
+    urls:
+      - REPLACE_WITH_JOBS_REDIS_URL
+    stream_name: memory-jobs
+    delayed_poll_interval: 1s
+    block_duration: 5s
+    claim_idle_time: 30s
+    max_delivery_count: 3
+    deduplication_ttl: 24h
+    operation_timeout: 30s
+    handler_timeout: 5m
+
+metadata:
+  stores:
+    - id: "REPLACE_WITH_RAM_STORE_ID"
+      urls:
+        - REPLACE_WITH_CONTENT_REDIS_URL
+      extraction_strategy: instruct
+      short_memory:
+        ttl_seconds: 86400
+      long_term_memory:
+        embedding_provider: openai
+        embedding_model: text-embedding-3-small
+        embedding_dimensions: 1536
+
+embedders_connection_details:
+  openai:
+    base_url: https://api.openai.com
+    credentials:
+      type: static
+      api_key: REPLACE_WITH_OPENAI_API_KEY
+
+dataplane_client:
+  base_url: http://redis-agent-memory:9000
+  auth:
+    disabled: true
+    passphrase: ""
+  http_client:
+    skip_verify: false
+    timeout: 30s
+    max_retry_attempts: 3
+
+promote_working_memory:
+  strategies:
+    summary:
+      promotion_deduplication_window: 5m
+    instruct:
+      promotion_deduplication_window: 5m
+  llm:
+    provider: openai
+    endpoint:
+      base_url: https://api.openai.com/v1
+      timeout: 60s
+      auth_format: bearer
+    credentials:
+      type: static
+      api_key: REPLACE_WITH_OPENAI_API_KEY
+    models:
+      default_chat_model: gpt-4o-mini
+    http_client:
+      skip_verify: false
+      timeout: 60s
+      max_retry_attempts: 3

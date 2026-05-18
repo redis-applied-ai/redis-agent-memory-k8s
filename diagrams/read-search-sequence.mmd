@@ -1,0 +1,17 @@
+sequenceDiagram
+  participant Client
+  participant RAM as RAM API
+  participant Redis as Redis Enterprise
+  participant OpenAI as OpenAI API
+
+  Client->>RAM: GET /session-memory/{sessionId}
+  RAM->>Redis: read session JSON
+  Redis-->>RAM: events
+  RAM-->>Client: session memory
+
+  Client->>RAM: POST /long-term-memory/search
+  RAM->>OpenAI: create query embedding
+  OpenAI-->>RAM: embedding vector
+  RAM->>Redis: vector search
+  Redis-->>RAM: memory records
+  RAM-->>Client: search results

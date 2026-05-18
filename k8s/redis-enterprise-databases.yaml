@@ -1,0 +1,31 @@
+apiVersion: app.redislabs.com/v1alpha1
+kind: RedisEnterpriseDatabase
+metadata:
+  name: ram-content
+  labels:
+    app.kubernetes.io/part-of: ram-harness
+spec:
+  redisEnterpriseCluster:
+    name: rec
+  memorySize: 256MB
+  databaseSecretName: redb-ram-content
+  databasePort: 12000
+  databaseServicePort: 6379
+  persistence: disabled
+  replication: false
+---
+apiVersion: app.redislabs.com/v1alpha1
+kind: RedisEnterpriseDatabase
+metadata:
+  name: ram-jobs
+  labels:
+    app.kubernetes.io/part-of: ram-harness
+spec:
+  redisEnterpriseCluster:
+    name: rec
+  memorySize: 256MB
+  databaseSecretName: redb-ram-jobs
+  databasePort: 12001
+  databaseServicePort: 6379
+  persistence: disabled
+  replication: false

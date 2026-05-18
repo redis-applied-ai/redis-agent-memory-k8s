@@ -1,0 +1,12 @@
+stateDiagram-v2
+  [*] --> RAMWrite: POST session event
+  RAMWrite --> ShortMemoryStored
+  ShortMemoryStored --> PromotionQueued
+  PromotionQueued --> WaitingWindow
+  WaitingWindow --> WorkerClaimed
+  WorkerClaimed --> SessionFetched
+  SessionFetched --> OpenAIPromotion
+  OpenAIPromotion --> MemoryExtracted
+  MemoryExtracted --> EmbeddingGenerated
+  EmbeddingGenerated --> LongTermStored
+  LongTermStored --> [*]

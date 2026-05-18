@@ -1,0 +1,8 @@
+flowchart LR
+  Users[App, curl, smoke test, or Locust] --> RAMAPI[RAM API server]
+  RAMAPI --> StoreRedis[Redis Enterprise REDB<br/>memory DB]
+  RAMAPI --> JobRedis[Redis Enterprise REDB<br/>Streams jobs]
+  JobRedis --> RAMWorker[RAM worker]
+  RAMWorker --> RAMAPI
+  RAMAPI --> OpenAI[OpenAI embeddings API]
+  RAMWorker --> OpenAIChat[OpenAI chat API]
