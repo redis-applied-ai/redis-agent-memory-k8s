@@ -29,9 +29,11 @@ done
 
 # AKS-specific config overrides — users can override any of these via .env or
 # shell exports before running this script.
-export REDIS_ENTERPRISE_VALUES="${REDIS_ENTERPRISE_VALUES:-${RAM_ROOT}/configs/redis-enterprise/operator.values.aks.yaml}"
-export REDIS_ENTERPRISE_DATABASES="${REDIS_ENTERPRISE_DATABASES:-${RAM_ROOT}/k8s/redis-enterprise-databases.aks.yaml}"
-export RAM_VALUES="${RAM_VALUES:-${RAM_ROOT}/configs/values.ram.aks.yaml}"
+# Direct assignment — common.sh has already set these to the kind defaults via :-
+# so we must override unconditionally here. Pre-export before invoking to customise.
+export REDIS_ENTERPRISE_VALUES="${RAM_ROOT}/configs/redis-enterprise/operator.values.aks.yaml"
+export REDIS_ENTERPRISE_DATABASES="${RAM_ROOT}/k8s/redis-enterprise-databases.aks.yaml"
+export RAM_VALUES="${RAM_ROOT}/configs/values.ram.aks.yaml"
 export RAM_USE_CURRENT_CONTEXT=true
 
 if [[ "$SKIP_PROVISION" != "true" ]]; then
