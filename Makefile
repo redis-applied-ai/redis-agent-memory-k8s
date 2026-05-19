@@ -5,19 +5,19 @@ export
 
 .DEFAULT_GOAL := help
 
-.PHONY: help up kind-up deploy-stack status logs port-forward smoke smoke-session seed-ltm load-working-memory load-working-memory-ui load-search load-promotion down delete-cluster
+.PHONY: help up kind-up deploy-stack status logs port-forward monitoring-status smoke smoke-session reset-data seed-ltm load-working-memory load-search load-promotion down delete-cluster
 
 help:
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_-]+:.*## / {printf "%-24s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-up: ## Create/reuse kind, then deploy Redis Enterprise and RAM
+up: ## Create/reuse kind, then deploy Redis Enterprise, RAM, and monitoring
 	./scripts/kind-up.sh
 	./scripts/deploy-stack.sh
 
 kind-up: ## Create/reuse the kind cluster
 	./scripts/kind-up.sh
 
-deploy-stack: ## Deploy Redis Enterprise and RAM into the configured context
+deploy-stack: ## Deploy Redis Enterprise, RAM, and monitoring into the configured context
 	./scripts/deploy-stack.sh
 
 status: ## Show Helm, pod, service, and port-forward status
@@ -26,8 +26,11 @@ status: ## Show Helm, pod, service, and port-forward status
 logs: ## Show recent RAM server and worker logs
 	./scripts/logs.sh all
 
-port-forward: ## Forward RAM API to http://127.0.0.1:9000
-	./scripts/port-forward-ram.sh
+port-forward: ## Forward RAM API, Prometheus, and Grafana locally
+	./scripts/port-forward.sh
+
+monitoring-status: ## Show Prometheus, Grafana, ServiceMonitor, and scrape target status
+	./scripts/monitoring-status.sh
 
 smoke: ## Run end-to-end smoke test, including long-term memory/model calls
 	./scripts/smoke-test.sh
@@ -35,26 +38,22 @@ smoke: ## Run end-to-end smoke test, including long-term memory/model calls
 smoke-session: ## Run health and session-memory smoke test only
 	./scripts/smoke-test.sh --skip-ltm
 
+reset-data: ## Flush RAM Redis databases and restart RAM
+	./scripts/reset-data.sh
+
 seed-ltm: ## Seed long-term memory for search load tests
 	./scripts/seed-long-term-memory.sh --count $${RAM_SEED_COUNT:-100}
 
-load-working-memory: ## Run working/session memory load with worker scaled to zero
-	./scripts/worker.sh off
-	./locust/run.sh --profile working-memory
+load-working-memory: ## Open Locust UI for working/session memory load
+	./locust/run.sh --profile working-memory --worker off
 
-load-working-memory-ui: ## Open Locust UI for working/session memory load
-	./scripts/worker.sh off
-	./locust/run.sh --profile working-memory --ui
+load-search: ## Open Locust UI for session plus long-term search load
+	./locust/run.sh --profile search --worker off
 
-load-search: ## Run session plus long-term search load profile
-	./scripts/worker.sh off
-	./locust/run.sh --profile search
+load-promotion: ## Open Locust UI with worker promotion enabled
+	./locust/run.sh --profile promotion --worker on
 
-load-promotion: ## Run promotion profile with worker enabled
-	./scripts/worker.sh on
-	./locust/run.sh --profile promotion
-
-down: ## Uninstall RAM and Redis Enterprise resources
+down: ## Uninstall monitoring, RAM, and Redis Enterprise resources
 	./scripts/down.sh
 
 delete-cluster: ## Delete the whole kind cluster

@@ -65,11 +65,11 @@ class RamSessionUser(FastHttpUser):
             if not 200 <= response.status_code < 300:
                 response.failure(f"expected 2xx, got {response.status_code}: {response.text[:200]}")
 
-    @task(int(os.getenv("RAM_WRITE_WEIGHT", "6")))
+    @task(1)
     def write_session_event(self) -> None:
         self._write_event()
 
-    @task(int(os.getenv("RAM_READ_WEIGHT", "3")))
+    @task(1)
     def get_session_memory(self) -> None:
         with self.client.get(
             f"/v1/stores/{STORE_ID}/session-memory/{self.session_id}",

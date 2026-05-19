@@ -8,8 +8,8 @@ usage() {
   cat <<'USAGE'
 Usage: down.sh [--delete-cluster]
 
-Uninstalls RAM and removes Redis resources. The kind cluster is kept
-unless --delete-cluster is passed.
+Uninstalls monitoring and RAM, then removes Redis resources. The kind cluster
+is kept unless --delete-cluster is passed.
 USAGE
 }
 
@@ -24,6 +24,20 @@ while [[ $# -gt 0 ]]; do
 done
 
 ram_require_cmd kubectl helm
+ram_use_context
+
+if kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; then
+  kubectl -n "$RAM_NAMESPACE" delete servicemonitor redis-agent-memory redis-enterprise --ignore-not-found=true >/dev/null 2>&1 || true
+fi
+kubectl -n "$RAM_MONITORING_NAMESPACE" delete configmap \
+  -l app.kubernetes.io/part-of=ram-harness,grafana_dashboard=1 \
+  --ignore-not-found=true >/dev/null 2>&1 || true
+
+if helm -n "$RAM_MONITORING_NAMESPACE" status "$RAM_MONITORING_RELEASE" >/dev/null 2>&1; then
+  helm -n "$RAM_MONITORING_NAMESPACE" uninstall "$RAM_MONITORING_RELEASE" || true
+else
+  echo "Monitoring release not found: ${RAM_MONITORING_RELEASE}"
+fi
 
 if helm -n "$RAM_NAMESPACE" status "$RAM_RELEASE" >/dev/null 2>&1; then
   helm -n "$RAM_NAMESPACE" uninstall "$RAM_RELEASE"
@@ -32,9 +46,6 @@ else
 fi
 
 kubectl -n "$RAM_NAMESPACE" delete pdb redis-agent-memory-server redis-agent-memory-worker --ignore-not-found=true >/dev/null 2>&1 || true
-if kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; then
-  kubectl -n "$RAM_NAMESPACE" delete servicemonitor redis-agent-memory --ignore-not-found=true >/dev/null 2>&1 || true
-fi
 
 if kubectl get crd redisenterprisedatabases.app.redislabs.com >/dev/null 2>&1; then
   kubectl -n "$REDIS_ENTERPRISE_NAMESPACE" delete -f "$REDIS_ENTERPRISE_DATABASES" --ignore-not-found=true || true

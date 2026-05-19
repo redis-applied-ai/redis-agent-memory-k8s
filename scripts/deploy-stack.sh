@@ -8,8 +8,9 @@ usage() {
   cat <<'USAGE'
 Usage: deploy-stack.sh
 
-Installs Redis Enterprise for Kubernetes, creates RAM Secrets, and installs
-RAM with Helm into the configured Kubernetes context.
+Installs Redis Enterprise for Kubernetes, creates RAM Secrets, installs RAM,
+and installs Prometheus/Grafana monitoring into the configured Kubernetes
+context.
 USAGE
 }
 
@@ -33,6 +34,8 @@ kubectl -n "$RAM_NAMESPACE" rollout restart "deploy/${RAM_RELEASE}" "deploy/${RA
 kubectl -n "$RAM_NAMESPACE" rollout status "deploy/${RAM_RELEASE}" --timeout="$RAM_WAIT_TIMEOUT"
 kubectl -n "$RAM_NAMESPACE" rollout status "deploy/${RAM_RELEASE}-worker" --timeout="$RAM_WAIT_TIMEOUT"
 
+"${RAM_ROOT}/scripts/install-monitoring.sh"
+
 "${RAM_ROOT}/scripts/status.sh"
 
-echo "RAM is installed. Run: make port-forward"
+echo "RAM and monitoring are installed. Run: make port-forward"
