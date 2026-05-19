@@ -7,3 +7,4 @@ license.key
 *.tgz
 __pycache__/
 .venv/
+.azure/
