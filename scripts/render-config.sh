@@ -68,26 +68,26 @@ escape_sed() {
 }
 
 redb_secret_name() {
-  local redb="$1"
+  declare redb="$1"
   kubectl -n "$REDIS_ENTERPRISE_NAMESPACE" get redb "$redb" -o jsonpath='{.spec.databaseSecretName}'
 }
 
 secret_value() {
-  local secret="$1"
-  local key="$2"
+  declare secret="$1"
+  declare key="$2"
   kubectl -n "$REDIS_ENTERPRISE_NAMESPACE" get secret "$secret" -o jsonpath="{.data.${key}}" |
     python3 -c 'import base64,sys; print(base64.b64decode(sys.stdin.read()).decode(), end="")'
 }
 
 redb_url() {
-  local redb="$1"
-  local secret
-  local password
-  local port
-  local service_names
-  local service
-  local host
-  local encoded_password
+  declare redb="$1"
+  declare secret
+  declare password
+  declare port
+  declare service_names
+  declare service
+  declare host
+  declare encoded_password
 
   secret="$(redb_secret_name "$redb")"
   if [[ -z "$secret" ]]; then
@@ -107,7 +107,7 @@ redb_url() {
   if [[ "$service" == *.* ]]; then
     host="$service"
   else
-    host="${service}.${REDIS_ENTERPRISE_NAMESPACE}.svc.cluster.local"
+    host="${service}.${REDIS_ENTERPRISE_NAMESPACE}.svc"
   fi
 
   encoded_password="$(python3 - "$password" <<'PY'

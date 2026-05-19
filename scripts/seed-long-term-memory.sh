@@ -43,9 +43,9 @@ if ! [[ "$COUNT" =~ ^[0-9]+$ ]] || [[ "$COUNT" -lt 1 ]]; then
 fi
 
 request_json() {
-  local output="$1"
-  local payload="$2"
-  local status
+  declare output="$1"
+  declare payload="$2"
+  declare status
   status="$(curl -sS -o "$output" -w '%{http_code}' -X POST "${BASE_URL}/v1/stores/${STORE_ID}/long-term-memory" \
     -H "content-type: application/json" \
     -d "$payload")"
@@ -65,7 +65,7 @@ for i in $(seq 1 "$COUNT"); do
   request_json "$response" "{
       \"memories\": [{
         \"id\": \"${MEMORY_ID}\",
-        \"text\": \"Seed memory ${i} for RAM search testing on local Kubernetes.\",
+        \"text\": \"Seed memory ${i} for RAM search testing on Kubernetes.\",
         \"memoryType\": \"semantic\",
         \"ownerId\": \"load-user\",
         \"namespace\": \"ram-load\",

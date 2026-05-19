@@ -5,12 +5,12 @@ set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
 wait_for_jsonpath() {
-  local description="$1"
-  local cmd="$2"
-  local expected="$3"
-  local timeout_seconds="${4%s}"
-  local start
-  local value
+  declare description="$1"
+  declare cmd="$2"
+  declare expected="$3"
+  declare timeout_seconds="${4%s}"
+  declare start
+  declare value
 
   start="$(date +%s)"
   while true; do
@@ -30,7 +30,7 @@ wait_for_jsonpath() {
 }
 
 wait_for_redb() {
-  local redb="$1"
+  declare redb="$1"
   wait_for_jsonpath "redb/${redb} status" \
     "kubectl -n '$REDIS_ENTERPRISE_NAMESPACE' get redb '$redb' -o jsonpath='{.status.status}'" \
     "active" \
@@ -42,8 +42,8 @@ wait_for_redb() {
 }
 
 ensure_redb_secret() {
-  local secret="$1"
-  local password
+  declare secret="$1"
+  declare password
 
   if kubectl -n "$REDIS_ENTERPRISE_NAMESPACE" get secret "$secret" >/dev/null 2>&1; then
     return 0

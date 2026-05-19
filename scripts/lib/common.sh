@@ -13,8 +13,8 @@ if [[ -f "${RAM_ROOT}/.env" ]]; then
   set +a
 fi
 
-RAM_NAMESPACE="${RAM_NAMESPACE:-${NAMESPACE:-ram-local}}"
-RAM_KIND_CLUSTER="${RAM_KIND_CLUSTER:-ram-local}"
+RAM_NAMESPACE="${RAM_NAMESPACE:-${NAMESPACE:-ram}}"
+RAM_KIND_CLUSTER="${RAM_KIND_CLUSTER:-ram}"
 RAM_KUBE_CONTEXT="${RAM_KUBE_CONTEXT:-kind-${RAM_KIND_CLUSTER}}"
 RAM_KIND_CONFIG="${RAM_KIND_CONFIG:-${RAM_ROOT}/k8s/kind.redis-enterprise.yaml}"
 RAM_RELEASE="${RAM_RELEASE:-redis-agent-memory}"
@@ -35,19 +35,19 @@ REDIS_ENTERPRISE_JOBS_REDB="${REDIS_ENTERPRISE_JOBS_REDB:-ram-jobs}"
 
 RAM_CONFIG_TEMPLATE="${RAM_CONFIG_TEMPLATE:-${RAM_ROOT}/memory-dataplane.config.yaml}"
 RAM_CONFIG_OUTPUT="${RAM_CONFIG_OUTPUT:-${RAM_ROOT}/.generated/memory-dataplane.config.yaml}"
-RAM_VALUES="${RAM_VALUES:-${RAM_ROOT}/configs/values.ram.local.yaml}"
+RAM_VALUES="${RAM_VALUES:-${RAM_ROOT}/configs/values.ram.kind.yaml}"
 RAM_LICENSE="${RAM_LICENSE:-${RAM_ROOT}/license}"
 RAM_WAIT_TIMEOUT="${RAM_WAIT_TIMEOUT:-180s}"
 RAM_HELM_TIMEOUT="${RAM_HELM_TIMEOUT:-5m}"
 REDIS_ENTERPRISE_WAIT_TIMEOUT="${REDIS_ENTERPRISE_WAIT_TIMEOUT:-1200s}"
 
-RAM_LOCAL_PORT="${RAM_LOCAL_PORT:-9000}"
-RAM_BASE_URL="${RAM_BASE_URL:-http://127.0.0.1:${RAM_LOCAL_PORT}}"
+RAM_API_PORT="${RAM_API_PORT:-9000}"
+RAM_BASE_URL="${RAM_BASE_URL:-http://127.0.0.1:${RAM_API_PORT}}"
 RAM_RESULTS_DIR="${RAM_RESULTS_DIR:-${RAM_ROOT}/results}"
 RAM_WORKER_REPLICAS="${RAM_WORKER_REPLICAS:-1}"
 
 ram_require_cmd() {
-  local missing=0
+  declare missing=0
   for cmd in "$@"; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
       echo "Required command not found: ${cmd}" >&2
@@ -58,8 +58,8 @@ ram_require_cmd() {
 }
 
 ram_require_file() {
-  local file="$1"
-  local hint="${2:-}"
+  declare file="$1"
+  declare hint="${2:-}"
   if [[ ! -f "$file" ]]; then
     if [[ -n "$hint" ]]; then
       echo "${hint}: ${file}" >&2

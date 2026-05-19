@@ -1,5 +1,4 @@
 .env
-*.local
 *.log
 results/
 license

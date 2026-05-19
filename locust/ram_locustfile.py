@@ -14,15 +14,15 @@ INCLUDE_LTM_SEARCH = os.getenv("RAM_INCLUDE_LTM_SEARCH", "true").lower() == "tru
 
 PROMPTS = [
     "I prefer concise status summaries about Redis Agent Memory.",
-    "Remember that the RAM harness is running locally first.",
-    "The local deployment uses direct OpenAI calls for embeddings and promotion.",
+    "Remember that the RAM harness is running on Kubernetes first.",
+    "The deployment uses direct OpenAI calls for embeddings and promotion.",
     "Search should find long-term memory about Redis Enterprise.",
     "The agent should remember deployment preferences for production.",
 ]
 
 SEARCH_TERMS = [
-    "Redis Agent Memory local Kubernetes",
-    "OpenAI embeddings local POC",
+    "Redis Agent Memory Kubernetes",
+    "OpenAI embeddings proof of concept",
     "Redis Enterprise vector search",
     "production Kubernetes deployment",
     "session memory and long-term memory",
@@ -54,7 +54,7 @@ class RamSessionUser(FastHttpUser):
             "role": "USER",
             "content": [{"text": random.choice(PROMPTS)}],
             "createdAt": now_ms(),
-            "metadata": {"source": "locust", "profile": "ram-local"},
+            "metadata": {"source": "locust", "profile": "ram"},
         }
         with self.client.post(
             f"/v1/stores/{STORE_ID}/session-memory/events",

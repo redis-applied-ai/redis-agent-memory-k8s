@@ -16,13 +16,12 @@ export RAM_STORE_ID
 
 usage() {
   cat <<'USAGE'
-Usage: run-local.sh [--profile working-memory|search|promotion|mixed] [--host url] [--users n] [--spawn-rate n] [--duration time] [--ui] [--web-host host] [--web-port port]
+Usage: run.sh [--profile working-memory|search|promotion] [--host url] [--users n] [--spawn-rate n] [--duration time] [--ui] [--web-host host] [--web-port port]
 
 Profiles:
   working-memory  Writes/reads session memory and disables long-term search.
   search          Writes/reads session memory and searches seeded long-term memory.
   promotion       Writes/reads session memory while the worker processes promotion jobs.
-  mixed           Writes/reads session memory and searches long-term memory.
 
 Modes:
   default         Headless run that writes CSV and HTML reports under results/.
@@ -65,7 +64,7 @@ case "$PROFILE" in
     export RAM_INCLUDE_LTM_SEARCH="false"
     export RAM_SEARCH_WEIGHT="0"
     ;;
-  search|mixed)
+  search)
     export RAM_INCLUDE_LTM_SEARCH="${RAM_INCLUDE_LTM_SEARCH:-true}"
     export RAM_SEARCH_WEIGHT="${RAM_SEARCH_WEIGHT:-1}"
     ;;
@@ -89,7 +88,7 @@ if [[ "$UI" == "true" ]]; then
   echo "Starting Locust UI for profile '${PROFILE}'"
   echo "RAM host: ${HOST}"
   echo "Locust UI: http://${WEB_HOST}:${WEB_PORT}"
-  echo "Open the UI with http://, not https://; Locust's local web server does not serve TLS."
+  echo "Open the UI with http://, not https://; Locust's web server does not serve TLS."
   exec locust -f "${RAM_ROOT}/locust/ram_locustfile.py" \
     --host "$HOST" \
     --web-host "$WEB_HOST" \

@@ -25,7 +25,7 @@ python -m venv .venv
 pip install -r locust/requirements.txt
 ```
 
-Default local load settings live in `.env` or `env/ram.local.env.example`:
+Default load settings live in `.env` or `env/ram.kind.env.example`:
 
 ```sh
 LOCUST_USERS=100
@@ -66,20 +66,20 @@ The working-memory and search profiles leave the worker scaled to zero. A large 
 
 ## Results
 
-`locust/run-local.sh` writes CSV and HTML reports under `results/` with the profile, user count, and UTC timestamp in the filename.
+`locust/run.sh` writes CSV and HTML reports under `results/` with the profile, user count, and UTC timestamp in the filename.
 
 ## Watch During A Test
 
 ```sh
 make status
 make logs
-kubectl -n ram-local get pods
+kubectl -n ram get pods
 ```
 
 If a metrics server is installed:
 
 ```sh
-kubectl -n ram-local top pods
+kubectl -n ram top pods
 ```
 
 ## What To Capture For Customer Runs

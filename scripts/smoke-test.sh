@@ -24,16 +24,16 @@ done
 
 ram_require_cmd curl python3
 
-SESSION_ID="local-$(uuidgen | tr '[:upper:]' '[:lower:]' | tr -d '-' | cut -c1-24)"
+SESSION_ID="ram-$(uuidgen | tr '[:upper:]' '[:lower:]' | tr -d '-' | cut -c1-24)"
 ACTOR_ID="ram-user"
 MEMORY_ID="mem-$(uuidgen | tr '[:upper:]' '[:lower:]' | tr -d '-' | cut -c1-24)"
 NOW_MS="$(($(date -u +%s) * 1000))"
-SESSION_TEXT="hello from the RAM local harness on Kubernetes"
-MEMORY_TEXT="The RAM local harness validates Redis Agent Memory before production deployment."
+SESSION_TEXT="hello from the RAM harness on Kubernetes"
+MEMORY_TEXT="The RAM harness validates Redis Agent Memory before production deployment."
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ram-smoke.XXXXXX")"
 
 cleanup() {
-  local status=$?
+  declare status=$?
   if [[ "$status" -eq 0 && "$KEEP_OUTPUT" != "true" ]]; then
     rm -rf "$TMP_DIR"
   else
@@ -43,11 +43,11 @@ cleanup() {
 trap cleanup EXIT
 
 request_json() {
-  local method="$1"
-  local url="$2"
-  local output="$3"
-  local payload="${4:-}"
-  local status
+  declare method="$1"
+  declare url="$2"
+  declare output="$3"
+  declare payload="${4:-}"
+  declare status
 
   if [[ -n "$payload" ]]; then
     status="$(curl -sS -o "$output" -w '%{http_code}' -X "$method" "$url" \
@@ -120,8 +120,8 @@ request_json POST "${BASE_URL}/v1/stores/${STORE_ID}/long-term-memory" \
       \"memoryType\": \"semantic\",
       \"sessionId\": \"${SESSION_ID}\",
       \"ownerId\": \"${ACTOR_ID}\",
-      \"namespace\": \"ram-local\",
-      \"topics\": [\"ram\", \"local-k8s\", \"openai\"]
+      \"namespace\": \"ram\",
+      \"topics\": [\"ram\", \"kind-k8s\", \"openai\"]
     }]
   }"
 
@@ -140,10 +140,10 @@ echo "Searching long-term memory"
 request_json POST "${BASE_URL}/v1/stores/${STORE_ID}/long-term-memory/search" \
   "${TMP_DIR}/ltm-search.json" \
   "{
-    \"text\": \"Redis Agent Memory local Kubernetes\",
+    \"text\": \"Redis Agent Memory Kubernetes\",
     \"filter\": {
       \"ownerId\": {\"eq\": \"${ACTOR_ID}\"},
-      \"namespace\": {\"eq\": \"ram-local\"}
+      \"namespace\": {\"eq\": \"ram\"}
     },
     \"filterOp\": \"all\",
     \"limit\": 10

@@ -18,12 +18,12 @@ usage() {
 Usage: install-ram.sh [options]
 
 Options:
-  --namespace ns       Kubernetes namespace. Default: ram-local
+  --namespace ns       Kubernetes namespace. Default: ram
   --release name       Helm release. Default: redis-agent-memory
   --values file        Helm values file.
   --license file       License file used only to calculate rollout checksum.
   --config file        Config file used only to calculate rollout checksum.
-  --chart chart        Helm chart ref or local path. Default: redis-ai/redis-agent-memory
+  --chart chart        Helm chart ref or filesystem path. Default: redis-ai/redis-agent-memory
   --version version    Public chart version. Default: 0.1.0
   --timeout duration   Helm wait timeout. Default: 5m
 USAGE

@@ -19,8 +19,8 @@ echo
 kubectl -n "$RAM_NAMESPACE" get pods,svc,deploy 2>/dev/null || true
 echo
 
-if command -v lsof >/dev/null 2>&1 && lsof -nP -iTCP:"$RAM_LOCAL_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
-  echo "Local API: http://127.0.0.1:${RAM_LOCAL_PORT}"
+if command -v lsof >/dev/null 2>&1 && lsof -nP -iTCP:"$RAM_API_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+  echo "API: http://127.0.0.1:${RAM_API_PORT}"
 else
-  echo "Local API: not forwarded. Run: make port-forward"
+  echo "API: not forwarded. Run: make port-forward"
 fi

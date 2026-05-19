@@ -1,6 +1,6 @@
 # Production Hardening
 
-The local harness now follows the same control-plane shape expected in AKS:
+The harness follows the same control-plane shape expected in AKS:
 
 ```text
 Redis Enterprise operator -> RedisEnterpriseCluster -> RedisEnterpriseDatabase -> REDB connection secrets -> RAM Helm release
@@ -10,9 +10,9 @@ Redis Enterprise operator -> RedisEnterpriseCluster -> RedisEnterpriseDatabase -
 
 - Use a supported AKS version and a dedicated node pool for Redis Enterprise.
 - Use a production storage class with the latency, reclaim, expansion, and backup behavior you want.
-- Keep Redis Enterprise and RAM in namespaces with clear ownership. The local default puts them together for simplicity.
+- Keep Redis Enterprise and RAM in namespaces with clear ownership. The kind default puts them together for simplicity.
 - Add CNI-specific NetworkPolicy after validating the operator, REC pods, webhook, services rigger, DNS, RAM, and model-provider egress paths. Do not copy a generic default-deny policy into AKS without testing those flows.
-- Add metrics scraping for RAM and Redis Enterprise. The local `make harden` target applies RAM PDBs and applies ServiceMonitor only when the CRD exists.
+- Add PodDisruptionBudgets and metrics scraping in the AKS deployment layer after replica counts and monitoring are finalized.
 
 ## Redis Enterprise
 

@@ -1,10 +1,10 @@
-# Redis Agent Memory Enterprise Local Harness
+# Redis Agent Memory Enterprise Harness
 
-This is the source of truth for running this stack locally.
+This is the source of truth for running this stack with kind.
 
 ## What This Is
 
-This harness runs Redis Agent Memory (RAM) on local Kubernetes using Redis Enterprise for Kubernetes. It is meant to validate the same deployment shape we would later use in AKS: Redis Enterprise operator, Redis Enterprise cluster, Redis Enterprise databases, generated database connection secrets, and a RAM Helm release.
+This harness runs Redis Agent Memory (RAM) on kind using Redis Enterprise for Kubernetes. It is meant to validate the same deployment shape we would later use in AKS: Redis Enterprise operator, Redis Enterprise cluster, Redis Enterprise databases, generated database connection secrets, and a RAM Helm release.
 
 Use it to prove RAM session memory, long-term memory, vector search, Redis Streams promotion jobs, OpenAI-backed embeddings/promotion, and basic load profiles before moving the pattern into a customer or cloud environment.
 
@@ -21,7 +21,29 @@ This is not a Redis Stack shortcut and does not run Redis Enterprise in standalo
 - OpenAI calls from RAM for embeddings and memory promotion.
 - Optional Locust load tests.
 
-No Redis Enterprise license file is required for this local harness. Redis Enterprise starts with a local trial license; `make status` shows the license state and expiration date.
+## System Outline
+
+```text
+Client, smoke test, or Locust
+  -> RAM API server
+    -> ram-content REDB for session memory, long-term memory, JSON, Search, and vectors
+    -> ram-jobs REDB for Redis Streams promotion jobs
+      -> RAM worker
+        -> RAM API callback
+        -> OpenAI embeddings/chat APIs
+        -> ram-content REDB long-term memory records
+```
+
+The RAM API server handles request/response paths such as writing session events, reading working memory, creating long-term memories, and searching long-term memory. The RAM worker handles asynchronous promotion jobs from Redis Streams: it reads queued work, calls the model provider, creates embeddings, and stores extracted memories.
+
+The stack is deliberately split into two phases:
+
+- [scripts/kind-up.sh](./scripts/kind-up.sh): create or reuse the kind cluster.
+- [scripts/deploy-stack.sh](./scripts/deploy-stack.sh): deploy Redis Enterprise, render RAM config, create RAM Secrets, and install RAM.
+
+`make up` runs both phases. `make deploy-stack` can be used later against any configured Kubernetes context, which keeps the deployment flow easier to translate to AKS.
+
+No Redis Enterprise license file is required for this harness. Redis Enterprise starts with a trial license; `make status` shows the license state and expiration date.
 
 ## Prerequisites
 
@@ -31,17 +53,17 @@ No Redis Enterprise license file is required for this local harness. Redis Enter
 - `OPENAI_API_KEY` exported in your shell or set in `.env`.
 - Optional for load testing: `locust`.
 
-Create and edit `.env` if you want persistent local defaults:
+Create and edit `.env` if you want persistent defaults:
 
 ```sh
-cp env/ram.local.env.example .env
+cp env/ram.kind.env.example .env
 ```
 
 Set a real `OPENAI_API_KEY` before first setup. Keep `.env`, `license`, `.generated/`, and `results/` out of source control.
 
 ## First Setup
 
-If you previously created `ram-local` with an older single-node kind config, recreate it so Redis Enterprise gets three worker nodes:
+If you previously created `ram` with an older single-node kind config, recreate it so Redis Enterprise gets three worker nodes. If the cluster does not exist, this command is harmless.
 
 ```sh
 make delete-cluster
@@ -50,11 +72,12 @@ make delete-cluster
 Then run:
 
 ```sh
-make verify
 make up
 ```
 
-`make up` creates or reuses the multi-node kind cluster, installs the Redis Enterprise operator, creates the REC and REDBs, renders RAM config from REDB connection secrets, creates RAM Secrets, installs RAM, restarts RAM so Redis indexes are ensured, and prints status.
+`make up` creates or reuses the multi-node kind cluster, then deploys the stack. The deploy step installs the Redis Enterprise operator, creates the REC and REDBs, renders RAM config from REDB connection secrets, creates RAM Secrets, installs RAM, restarts RAM so Redis indexes are ensured, and prints status.
+
+`make up` is the combined path. The phases are also available separately as `make kind-up` and `make deploy-stack`.
 
 The first run can take several minutes because Redis Enterprise images are large and the REC bootstraps three pods.
 
@@ -74,7 +97,7 @@ Expected high-level state:
 - RAM server deployment: Ready
 - RAM worker deployment: Ready
 
-In one terminal, expose RAM locally:
+In one terminal, expose the RAM API:
 
 ```sh
 make port-forward
@@ -93,15 +116,18 @@ make smoke
 
 ```sh
 make help            # Show all supported entrypoints
+make kind-up         # Create/reuse the kind cluster only
+make deploy-stack    # Deploy Redis Enterprise and RAM into the configured context
 make status          # Redis Enterprise, RAM, pods, services, and port-forward status
-make redis-status    # Redis Enterprise operator, REC, REDB, pods, and services only
 make port-forward    # Expose RAM at http://127.0.0.1:9000
 make smoke-session   # Health plus session write/read only
 make smoke           # Full smoke test, including long-term memory/model calls
 make logs            # RAM server and worker logs
 make load-working-memory     # Headless Locust test for working/session memory
 make load-working-memory-ui  # Locust UI for working/session memory at http://127.0.0.1:8089
-make harden          # Apply RAM PDBs and ServiceMonitor when supported
+make seed-ltm        # Seed long-term memory data for search load tests
+make load-search     # Session plus long-term memory search load test
+make load-promotion  # Session load while the RAM worker processes promotion jobs
 make down            # Uninstall RAM and Redis Enterprise resources
 make delete-cluster  # Delete the whole kind cluster
 ```
@@ -119,12 +145,21 @@ Operators do not manually copy Redis hostnames, ports, or passwords.
 
 ## Configuration Files
 
-- [env/ram.local.env.example](./env/ram.local.env.example): local environment defaults.
-- [k8s/kind.redis-enterprise.yaml](./k8s/kind.redis-enterprise.yaml): local kind topology.
+- [env/ram.kind.env.example](./env/ram.kind.env.example): kind environment defaults.
+- [k8s/kind.redis-enterprise.yaml](./k8s/kind.redis-enterprise.yaml): kind topology.
 - [configs/redis-enterprise/operator.values.yaml](./configs/redis-enterprise/operator.values.yaml): Redis Enterprise operator and REC values.
 - [k8s/redis-enterprise-databases.yaml](./k8s/redis-enterprise-databases.yaml): REDB definitions.
-- [configs/values.ram.local.yaml](./configs/values.ram.local.yaml): RAM Helm values.
+- [configs/values.ram.kind.yaml](./configs/values.ram.kind.yaml): RAM Helm values.
 - [memory-dataplane.config.yaml](./memory-dataplane.config.yaml): RAM config template.
+
+## Entry Point Scripts
+
+- [scripts/kind-up.sh](./scripts/kind-up.sh): creates or reuses the kind cluster.
+- [scripts/deploy-stack.sh](./scripts/deploy-stack.sh): installs Redis Enterprise and RAM.
+- [scripts/render-config.sh](./scripts/render-config.sh): renders RAM config from REDB connection secrets and `OPENAI_API_KEY`.
+- [scripts/create-ram-secrets.sh](./scripts/create-ram-secrets.sh): creates the RAM license and config Secrets.
+- [scripts/install-ram.sh](./scripts/install-ram.sh): installs or upgrades the RAM Helm release.
+- [scripts/down.sh](./scripts/down.sh): removes RAM, Redis Enterprise resources, and optionally the kind cluster.
 
 ## Load Tests
 
@@ -155,7 +190,7 @@ Or use the Locust UI:
 make load-working-memory-ui
 ```
 
-Open exactly `http://127.0.0.1:8089`, enter user count and spawn rate, and start the test. Locust serves plain HTTP locally; `https://127.0.0.1:8089` will fail. The RAM host is prefilled as `http://127.0.0.1:9000`.
+Open exactly `http://127.0.0.1:8089`, enter user count and spawn rate, and start the test. Locust serves plain HTTP; `https://127.0.0.1:8089` will fail. The RAM host is prefilled as `http://127.0.0.1:9000`.
 
 Search and promotion are separate because they include long-term memory or model-backed worker behavior:
 
@@ -177,7 +212,7 @@ Remove RAM and Redis Enterprise resources but keep the kind cluster:
 make down
 ```
 
-Delete the whole local Kubernetes cluster:
+Delete the whole kind Kubernetes cluster:
 
 ```sh
 make delete-cluster
@@ -185,7 +220,7 @@ make delete-cluster
 
 ## AKS Translation
 
-The local flow intentionally mirrors the AKS shape:
+The kind flow intentionally mirrors the AKS shape:
 
 ```text
 Kubernetes -> Redis Enterprise operator -> REC -> REDBs -> REDB secrets -> RAM Helm release

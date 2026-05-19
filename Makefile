@@ -5,22 +5,23 @@ export
 
 .DEFAULT_GOAL := help
 
-.PHONY: help up harden status redis-status logs port-forward smoke smoke-session seed-ltm load-working-memory load-working-memory-ui load-search load-promotion promotion-on promotion-off verify down delete-cluster
+.PHONY: help up kind-up deploy-stack status logs port-forward smoke smoke-session seed-ltm load-working-memory load-working-memory-ui load-search load-promotion down delete-cluster
 
 help:
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_-]+:.*## / {printf "%-24s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-up: ## Create/reuse kind, install Redis Enterprise, install RAM
-	./scripts/up.sh
+up: ## Create/reuse kind, then deploy Redis Enterprise and RAM
+	./scripts/kind-up.sh
+	./scripts/deploy-stack.sh
 
-harden: ## Apply optional PDBs and ServiceMonitor when supported
-	./scripts/apply-hardening.sh
+kind-up: ## Create/reuse the kind cluster
+	./scripts/kind-up.sh
+
+deploy-stack: ## Deploy Redis Enterprise and RAM into the configured context
+	./scripts/deploy-stack.sh
 
 status: ## Show Helm, pod, service, and port-forward status
 	./scripts/status.sh
-
-redis-status: ## Show Redis Enterprise operator, REC, REDB, pods, and services
-	./scripts/redis-enterprise-status.sh
 
 logs: ## Show recent RAM server and worker logs
 	./scripts/logs.sh all
@@ -39,31 +40,22 @@ seed-ltm: ## Seed long-term memory for search load tests
 
 load-working-memory: ## Run working/session memory load with worker scaled to zero
 	./scripts/worker.sh off
-	./locust/run-local.sh --profile working-memory
+	./locust/run.sh --profile working-memory
 
 load-working-memory-ui: ## Open Locust UI for working/session memory load
 	./scripts/worker.sh off
-	./locust/run-local.sh --profile working-memory --ui
+	./locust/run.sh --profile working-memory --ui
 
 load-search: ## Run session plus long-term search load profile
 	./scripts/worker.sh off
-	./locust/run-local.sh --profile search
+	./locust/run.sh --profile search
 
 load-promotion: ## Run promotion profile with worker enabled
 	./scripts/worker.sh on
-	./locust/run-local.sh --profile promotion
-
-promotion-on: ## Enable RAM worker promotion jobs
-	./scripts/worker.sh on
-
-promotion-off: ## Disable RAM worker promotion jobs
-	./scripts/worker.sh off
-
-verify: ## Verify chart and container image artifacts exist
-	./scripts/verify-artifacts.sh
+	./locust/run.sh --profile promotion
 
 down: ## Uninstall RAM and Redis Enterprise resources
 	./scripts/down.sh
 
-delete-cluster: ## Delete the whole local kind cluster
+delete-cluster: ## Delete the whole kind cluster
 	./scripts/down.sh --delete-cluster
