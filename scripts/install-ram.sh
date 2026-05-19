@@ -77,8 +77,7 @@ helm upgrade --install "$RELEASE" "$CHART" \
   --set image.tag="$IMAGE_TAG" \
   --set license.existingSecretChecksum="$LICENSE_CHECKSUM" \
   --set config.existingSecretChecksum="$CONFIG_CHECKSUM" \
-  --rollback-on-failure \
-  --wait \
+  --atomic \
   --timeout "$TIMEOUT"
 
 echo "RAM installed: release=${RELEASE} namespace=${NAMESPACE}"

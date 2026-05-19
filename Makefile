@@ -8,7 +8,7 @@ ARGS ?=
 
 .DEFAULT_GOAL := help
 
-.PHONY: help provision validate credentials up deploy-stack status logs port-forward smoke smoke-session seed-ltm load-working-memory load-working-memory-ui load-search load-promotion down delete delete-cluster
+.PHONY: help provision validate credentials up deploy-stack status logs port-forward smoke smoke-session seed-ltm load-working-memory load-working-memory-ui load-search load-promotion loadtest down delete delete-cluster
 
 help:
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_-]+:.*## / {printf "%-24s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -61,6 +61,9 @@ load-search: ## Run session plus long-term search load profile
 load-promotion: ## Run promotion profile with worker enabled
 	./scripts/worker.sh on
 	./locust/run.sh --profile promotion
+
+loadtest: ## Run Locust load test via the AKS load test VM  [ENV=aks]
+	./scripts/$(ENV)-loadtest.sh
 
 down: ## Uninstall RAM and Redis Enterprise  [ENV=local|aks]
 	./scripts/$(ENV)-down.sh

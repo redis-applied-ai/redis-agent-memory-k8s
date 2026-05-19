@@ -6,13 +6,13 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
 usage() {
   cat <<'USAGE'
-Usage: aks-up.sh [--skip-provision]
+Usage: aks-tf-up.sh [--skip-provision]
 
-Provisions an AKS cluster via Bicep, fetches credentials, installs Redis
+Provisions an AKS cluster via Terraform, fetches credentials, installs Redis
 Enterprise for Kubernetes, and installs RAM with Helm.
 
 Options:
-  --skip-provision  Skip Bicep deployment and credential fetch (cluster must
+  --skip-provision  Skip Terraform deployment and credential fetch (cluster must
                     already exist and kubeconfig must point to it)
 USAGE
 }
@@ -35,9 +35,9 @@ export RAM_VALUES="${RAM_VALUES:-${RAM_ROOT}/configs/values.ram.aks.yaml}"
 export RAM_USE_CURRENT_CONTEXT=true
 
 if [[ "$SKIP_PROVISION" != "true" ]]; then
-  ram_require_cmd az
-  "${RAM_ROOT}/scripts/aks-provision.sh"
-  "${RAM_ROOT}/scripts/aks-credentials.sh"
+  ram_require_cmd az terraform
+  "${RAM_ROOT}/scripts/aks-tf-provision.sh"
+  "${RAM_ROOT}/scripts/aks-tf-credentials.sh"
 fi
 
 "${RAM_ROOT}/scripts/deploy-stack.sh"

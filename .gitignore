@@ -8,3 +8,6 @@ license.key
 __pycache__/
 .venv/
 .azure/
+.terraform/
+*.tfstate
+*.tfstate.backup

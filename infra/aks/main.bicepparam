@@ -8,3 +8,6 @@ param systemNodeVmSize = 'Standard_D2s_v3'
 param systemNodeCount = 2
 param userNodeVmSize = 'Standard_E4s_v3'
 param userNodeCount = 3
+param adminSshPublicKey = 'REPLACE_WITH_SSH_PUBLIC_KEY'
+param adminUsername = 'azureuser'
+param loadtestVmSize = 'Standard_D4_v5'
