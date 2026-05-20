@@ -1,17 +1,18 @@
 # Redis Agent Memory Enterprise Harness
 
-This harness runs Redis Agent Memory (RAM) on Kubernetes using Redis Enterprise for Kubernetes. It supports two environments selected via `ENV=`:
+This harness runs Redis Agent Memory (RAM) on Kubernetes using Redis Enterprise for Kubernetes. It supports three environments selected via `ENV=`:
 
-| `ENV=` | Cluster | Use |
-|--------|---------|-----|
-| `local` (default) | kind (local Docker) | Day-to-day development |
-| `aks` | Azure Kubernetes Service | Cloud validation, demos |
+| `ENV=` | Cluster | Provisioner | Use |
+|--------|---------|-------------|-----|
+| `local` (default) | kind (local Docker) | — | Day-to-day development |
+| `aks-tf` | Azure Kubernetes Service | Terraform (**preferred**) | Cloud validation, load testing, demos |
+| `aks` | Azure Kubernetes Service | Bicep | Legacy; use `aks-tf` for new deployments |
 
-All `make` targets that create or destroy infrastructure accept `ENV=local` or `ENV=aks`. Installation, smoke tests, and load tests are cluster-agnostic and work without an `ENV` flag once the cluster is running.
+All `make` targets that create or destroy infrastructure accept `ENV=`. Installation, smoke tests, and load tests are cluster-agnostic and work without an `ENV` flag once the cluster is running.
 
 ## What This Is
 
-This harness runs Redis Agent Memory (RAM) on kind using Redis Enterprise for Kubernetes. It is meant to validate the same deployment shape we would later use in AKS: Redis Enterprise operator, Redis Enterprise cluster, Redis Enterprise databases, generated database connection secrets, and a RAM Helm release.
+This harness runs Redis Agent Memory (RAM) on Kubernetes using Redis Enterprise for Kubernetes. It supports local development on kind and cloud deployment on AKS (via Terraform or Bicep). All environments use the same deployment shape: Redis Enterprise operator, Redis Enterprise cluster, Redis Enterprise databases, generated database connection secrets, and a RAM Helm release.
 
 Use it to prove RAM session memory, long-term memory, vector search, Redis Streams promotion jobs, OpenAI-backed embeddings/promotion, and basic load profiles before moving the pattern into a customer or cloud environment.
 
@@ -22,14 +23,14 @@ This is not a Redis Stack shortcut and does not run Redis Enterprise in standalo
 All infrastructure targets accept an optional `ENV=` flag. The default is `local`:
 
 ```sh
-make up                 # kind cluster + install everything
-make up ENV=aks         # AKS cluster + install everything
+make up                    # kind cluster + install everything
+make up ENV=aks-tf         # AKS cluster via Terraform + install everything (preferred)
+make up ENV=aks            # AKS cluster via Bicep + install everything (legacy)
 
-make down               # uninstall RAM and Redis Enterprise (kind context)
-make down ENV=aks       # uninstall RAM and Redis Enterprise (AKS context)
+make down ENV=aks-tf       # uninstall RAM and Redis Enterprise (AKS)
+make delete ENV=aks-tf     # destroy Terraform-managed infrastructure
 
-make delete             # delete kind cluster
-make delete ENV=aks     # delete Azure resource group
+make delete                # delete kind cluster
 ```
 
 The install scripts (`deploy-stack.sh`, `render-config.sh`, `install-ram.sh`) are cluster-agnostic. The `ENV=` flag only affects cluster provisioning and which Helm values and REDB manifests are used.
@@ -83,15 +84,25 @@ No Redis Enterprise license file is required for this harness. Redis Enterprise 
 cp env/ram.kind.env.example .env
 ```
 
-### AKS (ENV=aks)
+### AKS — ENV=aks-tf (preferred) and ENV=aks
 
 All of the above, plus:
 - Azure CLI (`az`) authenticated to a subscription with permission to create resource groups and AKS clusters.
+- Terraform >= 1.5 (`brew install terraform`) for `ENV=aks-tf`.
 - No local Docker resources needed for the cluster itself.
 
+**Terraform (preferred):**
+```sh
+cp env/ram.aks-tf.env.example .env
+# edit AKS_RESOURCE_GROUP, AKS_CLUSTER_NAME, AKS_LOCATION,
+# AKS_ADMIN_SSH_PUBLIC_KEY, and OPENAI_API_KEY
+```
+
+**Bicep (legacy):**
 ```sh
 cp env/ram.aks.env.example .env
-# edit AKS_RESOURCE_GROUP, AKS_CLUSTER_NAME, AKS_LOCATION, and OPENAI_API_KEY
+# edit AKS_RESOURCE_GROUP, AKS_CLUSTER_NAME, AKS_LOCATION,
+# AKS_ADMIN_SSH_PUBLIC_KEY, and OPENAI_API_KEY
 ```
 
 Set a real `OPENAI_API_KEY` before first setup. Keep `.env`, `license`, `.generated/`, and `results/` out of source control.
@@ -118,44 +129,68 @@ make up
 
 The first run can take several minutes because Redis Enterprise images are large and the REC bootstraps three pods.
 
-### AKS (ENV=aks)
+### AKS — Terraform (ENV=aks-tf, preferred)
 
-Optionally validate the Bicep template before spending any money:
+Optionally preview what Terraform will create before spending anything:
 
 ```sh
-make validate ENV=aks
+make validate ENV=aks-tf
 ```
 
-This runs `az deployment group create --what-if` and shows what Azure would create without deploying anything.
+This runs `terraform plan` and shows all resources that would be created.
 
 Then deploy everything:
 
 ```sh
-make up ENV=aks
+make up ENV=aks-tf
 ```
 
-`make up ENV=aks` runs the full sequence:
+`make up ENV=aks-tf` runs the full sequence:
 
-1. `az group create` — creates the resource group
-2. `az deployment group create` — deploys the AKS cluster via Bicep (`infra/aks/`)
-3. `az aks get-credentials` — sets the kubectl context
-4. Installs Redis Enterprise operator, creates the REC and REDBs
-5. Renders RAM config, creates RAM Secrets, installs RAM
+1. `terraform init && terraform apply` — provisions all Azure resources (`infra/terraform/`)
+2. `az aks get-credentials` — sets the kubectl context
+3. Installs Redis Enterprise operator, creates the REC and REDBs
+4. Renders RAM config, creates RAM Secrets, installs RAM
+5. Creates the RAM internal load balancer service
 
-AKS provisioning takes 5-10 minutes. The Bicep templates create a 2-node system pool (`Standard_D2s_v3`) and a 3-node user pool (`Standard_E4s_v3`) sized for Redis Enterprise. Node sizes and counts are configurable via `.env` — see `env/ram.aks.env.example`.
+Terraform creates:
+- Resource group
+- AKS cluster: 2-node system pool + 3-node Redis Enterprise pool
+- Load test VM (Ubuntu 22.04, Locust pre-installed) with a public IP for SSH
+- Dedicated VNet for the load test VM, peered with the AKS node VNet so the VM can reach the RAM internal load balancer
+- Internal load balancer service for RAM (`redis-agent-memory-ilb`) — the VM hits RAM at `http://<ilb-ip>:9000` without port-forwarding
 
-To re-deploy into an existing AKS cluster without re-provisioning:
+Provisioning takes 8-12 minutes. Node sizes and counts are configurable via `.env`.
+
+To re-deploy into an existing cluster without re-provisioning:
 
 ```sh
-make up ENV=aks -- --skip-provision
+make up ENV=aks-tf ARGS=--skip-provision
 ```
 
 Or run the phases individually:
 
 ```sh
-make provision ENV=aks   # Bicep only
-make credentials ENV=aks # fetch kubeconfig
-make deploy-stack        # install into current context
+make provision ENV=aks-tf   # Terraform only
+make credentials ENV=aks-tf # fetch kubeconfig
+make deploy-stack            # install into current context
+```
+
+To run a load test from the load test VM:
+
+```sh
+make loadtest ENV=aks-tf
+```
+
+This discovers the VM's public IP and the ILB's private IP, copies the Locust files to the VM, and runs Locust headlessly over SSH.
+
+### AKS — Bicep (ENV=aks, legacy)
+
+`ENV=aks` uses Azure Bicep for infrastructure provisioning. Prefer `ENV=aks-tf` for new deployments — Terraform handles VNet peering natively and has better state management. The Bicep path remains for reference.
+
+```sh
+make validate ENV=aks   # az deployment group create --what-if
+make up ENV=aks         # provision via Bicep + full install
 ```
 
 ## Validate
@@ -227,18 +262,20 @@ Operators do not manually copy Redis hostnames, ports, or passwords.
 | File | ENV | Purpose |
 |------|-----|---------|
 | `env/ram.kind.env.example` | local | kind environment variable defaults |
-| `env/ram.aks.env.example` | aks | AKS environment variable defaults |
+| `env/ram.aks-tf.env.example` | aks-tf | AKS + Terraform environment variable defaults |
+| `env/ram.aks.env.example` | aks | AKS + Bicep environment variable defaults (legacy) |
 | `k8s/kind.redis-enterprise.yaml` | local | kind cluster topology |
-| `infra/aks/main.bicep` | aks | AKS Bicep entry point |
-| `infra/aks/main.bicepparam` | aks | AKS Bicep parameter defaults |
-| `infra/aks/modules/aks.bicep` | aks | AKS cluster module |
+| `infra/terraform/` | aks-tf | Terraform configuration for AKS + load test VM + VNet peering |
+| `infra/aks/main.bicep` | aks | AKS Bicep entry point (legacy) |
+| `infra/aks/modules/` | aks | AKS, VNet, and load test VM Bicep modules (legacy) |
 | `configs/redis-enterprise/operator.values.yaml` | local | Redis Enterprise operator and REC values |
-| `configs/redis-enterprise/operator.values.aks.yaml` | aks | REC values — production sizing, managed-premium storage |
+| `configs/redis-enterprise/operator.values.aks.yaml` | aks, aks-tf | REC values — production sizing, standard storage |
 | `k8s/redis-enterprise-databases.yaml` | local | REDB definitions — no persistence |
-| `k8s/redis-enterprise-databases.aks.yaml` | aks | REDB definitions — `aofEverySecond`, replication enabled |
+| `k8s/redis-enterprise-databases.aks.yaml` | aks, aks-tf | REDB definitions — `aofEverySecond`, replication enabled |
+| `k8s/ram-internal-lb.aks.yaml` | aks, aks-tf | Internal LoadBalancer service for RAM (load test VM access) |
 | `configs/values.ram.kind.yaml` | local | RAM Helm values |
-| `configs/values.ram.aks.yaml` | aks | RAM Helm values — autoscaling, production sizing |
-| `memory-dataplane.config.yaml` | both | RAM config template |
+| `configs/values.ram.aks.yaml` | aks, aks-tf | RAM Helm values — autoscaling, production sizing |
+| `memory-dataplane.config.yaml` | all | RAM config template |
 
 ## Entry Point Scripts
 
@@ -255,9 +292,17 @@ Local (kind):
 - [scripts/local-down.sh](./scripts/local-down.sh): uninstall RAM and Redis Enterprise from kind.
 - [scripts/local-delete.sh](./scripts/local-delete.sh): delete the kind cluster.
 
-AKS:
-- [scripts/aks-up.sh](./scripts/aks-up.sh): provision AKS + fetch credentials + deploy-stack.
-- [scripts/aks-provision.sh](./scripts/aks-provision.sh): create resource group and deploy Bicep.
+AKS — Terraform (preferred):
+- [scripts/aks-tf-up.sh](./scripts/aks-tf-up.sh): provision via Terraform + fetch credentials + deploy-stack + ILB.
+- [scripts/aks-tf-provision.sh](./scripts/aks-tf-provision.sh): `terraform init && apply` (or `plan` with `--what-if`).
+- [scripts/aks-tf-credentials.sh](./scripts/aks-tf-credentials.sh): `az aks get-credentials`.
+- [scripts/aks-tf-down.sh](./scripts/aks-tf-down.sh): uninstall RAM and Redis Enterprise from AKS.
+- [scripts/aks-tf-delete.sh](./scripts/aks-tf-delete.sh): `terraform destroy`.
+- [scripts/aks-loadtest.sh](./scripts/aks-loadtest.sh): run Locust from the load test VM against the internal load balancer.
+
+AKS — Bicep (legacy):
+- [scripts/aks-up.sh](./scripts/aks-up.sh): provision via Bicep + fetch credentials + deploy-stack + ILB.
+- [scripts/aks-provision.sh](./scripts/aks-provision.sh): create resource group, deploy Bicep, set up VNet peering.
 - [scripts/aks-credentials.sh](./scripts/aks-credentials.sh): `az aks get-credentials`.
 - [scripts/aks-down.sh](./scripts/aks-down.sh): uninstall RAM and Redis Enterprise from AKS.
 - [scripts/aks-delete.sh](./scripts/aks-delete.sh): delete the Azure resource group.
@@ -321,21 +366,37 @@ Delete the kind cluster entirely:
 make delete-cluster
 ```
 
-### AKS
+### AKS — Terraform (ENV=aks-tf)
 
-Uninstall RAM and Redis Enterprise from the AKS cluster (cluster remains):
+Uninstall RAM and Redis Enterprise from the cluster (cluster remains):
+
+```sh
+make down ENV=aks-tf
+```
+
+Destroy all Terraform-managed infrastructure:
+
+```sh
+make delete ENV=aks-tf
+```
+
+This runs `terraform destroy -auto-approve` and removes all Azure resources.
+
+### AKS — Bicep (ENV=aks, legacy)
+
+Uninstall RAM and Redis Enterprise from the cluster (cluster remains):
 
 ```sh
 make down ENV=aks
 ```
 
-Delete the entire Azure resource group (cluster + all Azure resources):
+Delete the entire Azure resource group:
 
 ```sh
 make delete ENV=aks
 ```
 
-`make delete ENV=aks` is async by default — it returns immediately and deletion continues in Azure. Check progress with:
+`make delete ENV=aks` is async — it returns immediately. Check progress with:
 
 ```sh
 az group show --name ram-aks-rg --query properties.provisioningState -o tsv
