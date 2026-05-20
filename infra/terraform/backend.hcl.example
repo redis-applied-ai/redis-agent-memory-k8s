@@ -1,0 +1,11 @@
+# Terraform remote state backend configuration.
+# Copy this file to backend.hcl and fill in the values from tf-backend-bootstrap.sh output.
+# backend.hcl is gitignored — share the values with teammates out of band.
+#
+# Required env var (add to .env):
+#   ARM_ACCESS_KEY=<storage account key from tf-backend-bootstrap.sh>
+
+resource_group_name  = "ram-tfstate-rg"
+storage_account_name = "REPLACE_WITH_STORAGE_ACCOUNT_NAME"
+container_name       = "tfstate"
+key                  = "redis-agent-memory-k8s.tfstate"

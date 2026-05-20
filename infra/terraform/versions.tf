@@ -8,12 +8,9 @@ terraform {
     }
   }
 
-  # backend "azurerm" {
-  #   resource_group_name  = "tfstate-rg"
-  #   storage_account_name = "tfstateaccount"
-  #   container_name       = "tfstate"
-  #   key                  = "redis-agent-memory-k8s.tfstate"
-  # }
+  backend "azurerm" {}
+  # Backend values come from infra/terraform/backend.hcl (gitignored).
+  # Run scripts/tf-backend-bootstrap.sh once to create the storage account and generate backend.hcl.
 }
 
 provider "azurerm" {

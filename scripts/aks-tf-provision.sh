@@ -35,12 +35,18 @@ while [[ $# -gt 0 ]]; do
 done
 
 TF_DIR="${RAM_ROOT}/infra/terraform"
+BACKEND_HCL="${TF_DIR}/backend.hcl"
 cd "$TF_DIR"
+
+BACKEND_ARGS=()
+if [[ -f "$BACKEND_HCL" ]]; then
+  BACKEND_ARGS+=("-backend-config=${BACKEND_HCL}")
+fi
 
 if [[ "$WHAT_IF" == "true" ]]; then
   echo "Dry-run: planning Terraform deployment for AKS cluster: ${AKS_CLUSTER_NAME}"
   if [[ "$SKIP_INIT" != "true" ]]; then
-    terraform init
+    terraform init "${BACKEND_ARGS[@]}"
   fi
   terraform plan
   exit 0
@@ -48,7 +54,7 @@ fi
 
 echo "Deploying AKS cluster via Terraform: ${AKS_CLUSTER_NAME}"
 if [[ "$SKIP_INIT" != "true" ]]; then
-  terraform init
+  terraform init "${BACKEND_ARGS[@]}"
 fi
 terraform apply -auto-approve
 echo "AKS cluster provisioned: ${AKS_CLUSTER_NAME}"
