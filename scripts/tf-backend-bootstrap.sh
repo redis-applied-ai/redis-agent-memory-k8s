@@ -21,7 +21,7 @@ echo "Creating Terraform state resource group: ${TFSTATE_RG} (${TFSTATE_LOCATION
 az group create --name "$TFSTATE_RG" --location "$TFSTATE_LOCATION" --output none
 
 # Storage account names must be globally unique, lowercase, 3-24 chars.
-TFSTATE_STORAGE_ACCOUNT="${TFSTATE_STORAGE_ACCOUNT,,}"
+TFSTATE_STORAGE_ACCOUNT="$(echo "$TFSTATE_STORAGE_ACCOUNT" | tr '[:upper:]' '[:lower:]')"
 echo "Creating storage account: ${TFSTATE_STORAGE_ACCOUNT}"
 az storage account create \
   --name "$TFSTATE_STORAGE_ACCOUNT" \
