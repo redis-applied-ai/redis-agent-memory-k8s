@@ -23,3 +23,38 @@ output "kube_config_raw" {
   value       = azurerm_kubernetes_cluster.aks.kube_config_raw
   sensitive   = true
 }
+
+output "openai_endpoint" {
+  description = "Azure OpenAI endpoint URL. Use this as the base_url in RAM's embedders/promotion config."
+  value       = azurerm_cognitive_account.openai.endpoint
+}
+
+output "openai_account_name" {
+  description = "Name of the Azure OpenAI account."
+  value       = azurerm_cognitive_account.openai.name
+}
+
+output "openai_chat_deployment_name" {
+  description = "Deployment name to reference for chat completions."
+  value       = azurerm_cognitive_deployment.chat.name
+}
+
+output "openai_embedding_deployment_name" {
+  description = "Deployment name to reference for embeddings."
+  value       = azurerm_cognitive_deployment.embedding.name
+}
+
+output "ram_identity_client_id" {
+  description = "Client ID of the UAMI the RAM ServiceAccount federates to. Annotate the SA with azure.workload.identity/client-id = <this>."
+  value       = azurerm_user_assigned_identity.ram.client_id
+}
+
+output "ram_identity_tenant_id" {
+  description = "Tenant ID for the UAMI."
+  value       = azurerm_user_assigned_identity.ram.tenant_id
+}
+
+output "aks_oidc_issuer_url" {
+  description = "OIDC issuer URL for the AKS cluster (used by the federated identity credential)."
+  value       = azurerm_kubernetes_cluster.aks.oidc_issuer_url
+}

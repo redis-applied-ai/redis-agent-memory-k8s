@@ -62,3 +62,99 @@ variable "loadtest_vm_size" {
   type        = string
   default     = "Standard_D4_v5"
 }
+
+variable "openai_account_name" {
+  description = "Name of the Azure OpenAI (Cognitive Services) account. Must be globally unique and used as the custom subdomain."
+  type        = string
+  default     = "ram-aoai"
+}
+
+variable "openai_location" {
+  description = "Azure region for the OpenAI account. Defaults to the resource group location; override if the chosen models are not available in that region (e.g. eastus, eastus2, swedencentral)."
+  type        = string
+  default     = ""
+}
+
+variable "openai_sku_name" {
+  description = "SKU for the OpenAI account. Standard is S0."
+  type        = string
+  default     = "S0"
+}
+
+variable "openai_chat_deployment_name" {
+  description = "Deployment name for the chat completion model. RAM references this name (not the underlying model)."
+  type        = string
+  default     = "gpt-4o-mini"
+}
+
+variable "openai_chat_model" {
+  description = "Underlying chat completion model name as published by Azure OpenAI."
+  type        = string
+  default     = "gpt-4o-mini"
+}
+
+variable "openai_chat_model_version" {
+  description = "Version of the chat completion model. Check `az cognitiveservices account list-models` for available versions in your region."
+  type        = string
+  default     = "2024-07-18"
+}
+
+variable "openai_chat_sku_name" {
+  description = "Deployment SKU for the chat model (e.g. Standard, GlobalStandard)."
+  type        = string
+  default     = "Standard"
+}
+
+variable "openai_chat_sku_capacity" {
+  description = "Capacity (TPM in thousands) for the chat deployment."
+  type        = number
+  default     = 50
+}
+
+variable "openai_embedding_deployment_name" {
+  description = "Deployment name for the text embedding model."
+  type        = string
+  default     = "text-embedding-3-small"
+}
+
+variable "openai_embedding_model" {
+  description = "Underlying embedding model name as published by Azure OpenAI."
+  type        = string
+  default     = "text-embedding-3-small"
+}
+
+variable "openai_embedding_model_version" {
+  description = "Version of the embedding model."
+  type        = string
+  default     = "1"
+}
+
+variable "openai_embedding_sku_name" {
+  description = "Deployment SKU for the embedding model."
+  type        = string
+  default     = "Standard"
+}
+
+variable "openai_embedding_sku_capacity" {
+  description = "Capacity (TPM in thousands) for the embedding deployment."
+  type        = number
+  default     = 120
+}
+
+variable "ram_identity_name" {
+  description = "Name of the User Assigned Managed Identity that the RAM pod will federate to via workload identity."
+  type        = string
+  default     = "ram-aoai-identity"
+}
+
+variable "ram_namespace" {
+  description = "Kubernetes namespace where the RAM ServiceAccount lives. Must match the namespace used at helm install time."
+  type        = string
+  default     = "ram"
+}
+
+variable "ram_service_account_name" {
+  description = "Name of the Kubernetes ServiceAccount the RAM pods run under. Must match the SA created by the RAM helm chart for federation to bind."
+  type        = string
+  default     = "redis-agent-memory"
+}
