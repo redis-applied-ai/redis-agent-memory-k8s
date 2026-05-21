@@ -1,0 +1,30 @@
+admission:
+  limitToNamespace: true
+
+cluster:
+  create: true
+  name: rec
+  waitForReady: false
+  deletePVCsOnUninstall: false
+  timeout: 1200
+  spec:
+    nodes: 3
+    persistentSpec:
+      enabled: true
+      volumeSize: 50Gi
+      storageClassName: managed  # use managed-premium with 's'-suffix VMs (e.g. Standard_D4s_v5)
+    redisEnterpriseNodeResources:
+      requests:
+        cpu: "2"
+        memory: 4Gi
+      limits:
+        cpu: "4"
+        memory: 8Gi
+    bootstrapperResources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: "2"
+        memory: 2Gi
+    uiServiceType: ClusterIP

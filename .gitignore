@@ -7,3 +7,8 @@ license.key
 *.tgz
 __pycache__/
 .venv/
+.azure/
+.terraform/
+*.tfstate
+*.tfstate.backup
+infra/terraform/backend.hcl

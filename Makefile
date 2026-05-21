@@ -3,21 +3,29 @@ SHELL := /usr/bin/env bash
 -include .env
 export
 
+ENV  ?= local
+ARGS ?=
+
 .DEFAULT_GOAL := help
 
-.PHONY: help up kind-up deploy-stack status logs port-forward smoke smoke-session seed-ltm load-working-memory load-working-memory-ui load-search load-promotion down delete-cluster
+.PHONY: help provision validate credentials up deploy-stack status logs port-forward smoke smoke-session seed-ltm load-working-memory load-working-memory-ui load-search load-promotion loadtest down delete delete-cluster
 
 help:
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_-]+:.*## / {printf "%-24s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-up: ## Create/reuse kind, then deploy Redis Enterprise and RAM
-	./scripts/kind-up.sh
-	./scripts/deploy-stack.sh
+provision: ## Create cluster infrastructure  [ENV=local|aks]
+	./scripts/$(ENV)-provision.sh
 
-kind-up: ## Create/reuse the kind cluster
-	./scripts/kind-up.sh
+validate: ## Dry-run validate cluster infrastructure without deploying  [ENV=aks]
+	./scripts/$(ENV)-provision.sh --what-if
 
-deploy-stack: ## Deploy Redis Enterprise and RAM into the configured context
+credentials: ## Fetch cluster credentials  [ENV=aks]
+	./scripts/$(ENV)-credentials.sh
+
+up: ## Create cluster and install Redis Enterprise + RAM  [ENV=local|aks] [ARGS=--skip-provision]
+	./scripts/$(ENV)-up.sh $(ARGS)
+
+deploy-stack: ## Install Redis Enterprise + RAM into current context (local only)
 	./scripts/deploy-stack.sh
 
 status: ## Show Helm, pod, service, and port-forward status
@@ -54,8 +62,14 @@ load-promotion: ## Run promotion profile with worker enabled
 	./scripts/worker.sh on
 	./locust/run.sh --profile promotion
 
-down: ## Uninstall RAM and Redis Enterprise resources
-	./scripts/down.sh
+loadtest: ## Run Locust load test via the AKS load test VM  [ENV=aks]
+	./scripts/$(ENV)-loadtest.sh
 
-delete-cluster: ## Delete the whole kind cluster
-	./scripts/down.sh --delete-cluster
+down: ## Uninstall RAM and Redis Enterprise  [ENV=local|aks]
+	./scripts/$(ENV)-down.sh
+
+delete: ## Destroy cluster infrastructure  [ENV=local|aks]
+	./scripts/$(ENV)-delete.sh
+
+delete-cluster: ## Delete the local kind cluster (alias: make delete ENV=local)
+	./scripts/local-delete.sh
