@@ -100,9 +100,9 @@ variable "openai_chat_model_version" {
 }
 
 variable "openai_chat_sku_name" {
-  description = "Deployment SKU for the chat model (e.g. Standard, GlobalStandard)."
+  description = "Deployment SKU for the chat model. GlobalStandard is the modern pay-as-you-go tier and is supported in the widest set of regions; Standard is restricted to a shrinking set of legacy regions. Other options: DataZoneStandard, GlobalBatch, GlobalProvisionedManaged."
   type        = string
-  default     = "Standard"
+  default     = "GlobalStandard"
 }
 
 variable "openai_chat_sku_capacity" {
@@ -130,9 +130,9 @@ variable "openai_embedding_model_version" {
 }
 
 variable "openai_embedding_sku_name" {
-  description = "Deployment SKU for the embedding model."
+  description = "Deployment SKU for the embedding model. GlobalStandard is the modern pay-as-you-go tier and is supported in the widest set of regions. Other option: DataZoneStandard."
   type        = string
-  default     = "Standard"
+  default     = "GlobalStandard"
 }
 
 variable "openai_embedding_sku_capacity" {
