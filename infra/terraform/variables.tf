@@ -158,3 +158,27 @@ variable "ram_service_account_name" {
   type        = string
   default     = "redis-agent-memory"
 }
+
+variable "acr_name" {
+  description = "Name of the Azure Container Registry. Must be globally unique, alphanumeric, 5-50 chars."
+  type        = string
+  default     = "ramaoai"
+}
+
+variable "acr_sku" {
+  description = "SKU for the ACR. Basic is sufficient for development; Standard adds geo-redundancy."
+  type        = string
+  default     = "Basic"
+}
+
+variable "canary_namespace" {
+  description = "Kubernetes namespace for the AOAI workload-identity canary."
+  type        = string
+  default     = "aoai-canary"
+}
+
+variable "canary_service_account_name" {
+  description = "Name of the ServiceAccount the canary pod runs under. The RAM UAMI is federated to this SA so the canary tests the same auth path as RAM."
+  type        = string
+  default     = "aoai-canary"
+}

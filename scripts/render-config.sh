@@ -33,15 +33,21 @@ while [[ $# -gt 0 ]]; do
 done
 
 ram_require_file "$TEMPLATE" "Template not found"
-if [[ -z "${OPENAI_API_KEY:-}" && -f "$OUTPUT" ]]; then
-  OPENAI_API_KEY="$(awk -F': ' '/api_key:/ {gsub(/"/, "", $2); print $2; exit}' "$OUTPUT")"
-fi
-[[ -n "${OPENAI_API_KEY:-}" ]] || { echo "OPENAI_API_KEY is not set" >&2; exit 1; }
-[[ "$OPENAI_API_KEY" != "$OPENAI_PLACEHOLDER" ]] || { echo "OPENAI_API_KEY still contains the example placeholder" >&2; exit 1; }
 
-if ! grep -q "$OPENAI_PLACEHOLDER" "$TEMPLATE"; then
-  echo "Template does not contain $OPENAI_PLACEHOLDER: $TEMPLATE" >&2
-  exit 1
+# OpenAI API key substitution is optional — only required when the template
+# still uses static credentials (credentials.type: static + REPLACE_WITH_OPENAI_API_KEY).
+# Templates that use Entra credentials (credentials.type: entra) don't need a key.
+NEEDS_OPENAI_KEY="false"
+if grep -q "$OPENAI_PLACEHOLDER" "$TEMPLATE"; then
+  NEEDS_OPENAI_KEY="true"
+fi
+
+if [[ "$NEEDS_OPENAI_KEY" == "true" ]]; then
+  if [[ -z "${OPENAI_API_KEY:-}" && -f "$OUTPUT" ]]; then
+    OPENAI_API_KEY="$(awk -F': ' '/api_key:/ {gsub(/"/, "", $2); print $2; exit}' "$OUTPUT")"
+  fi
+  [[ -n "${OPENAI_API_KEY:-}" ]] || { echo "OPENAI_API_KEY is not set (template uses static credentials)" >&2; exit 1; }
+  [[ "$OPENAI_API_KEY" != "$OPENAI_PLACEHOLDER" ]] || { echo "OPENAI_API_KEY still contains the example placeholder" >&2; exit 1; }
 fi
 
 if ! grep -q "$STORE_ID_PLACEHOLDER" "$TEMPLATE"; then
@@ -129,13 +135,22 @@ if [[ -z "${RAM_JOBS_REDIS_URL:-}" ]]; then
   RAM_JOBS_REDIS_URL="$(redb_url "$REDIS_ENTERPRISE_JOBS_REDB")"
 fi
 
-sed \
-  -e "s/$OPENAI_PLACEHOLDER/$(escape_sed "$OPENAI_API_KEY")/g" \
-  -e "s/$STORE_ID_PLACEHOLDER/$(escape_sed "$RAM_STORE_ID")/g" \
-  -e "s/$CONTENT_REDIS_PLACEHOLDER/$(escape_sed "$RAM_CONTENT_REDIS_URL")/g" \
-  -e "s/$JOBS_REDIS_PLACEHOLDER/$(escape_sed "$RAM_JOBS_REDIS_URL")/g" \
-  "$TEMPLATE" > "$tmp_output"
-if grep -qE "${OPENAI_PLACEHOLDER}|${STORE_ID_PLACEHOLDER}|${CONTENT_REDIS_PLACEHOLDER}|${JOBS_REDIS_PLACEHOLDER}" "$tmp_output"; then
+SED_ARGS=(
+  -e "s/$STORE_ID_PLACEHOLDER/$(escape_sed "$RAM_STORE_ID")/g"
+  -e "s/$CONTENT_REDIS_PLACEHOLDER/$(escape_sed "$RAM_CONTENT_REDIS_URL")/g"
+  -e "s/$JOBS_REDIS_PLACEHOLDER/$(escape_sed "$RAM_JOBS_REDIS_URL")/g"
+)
+if [[ "$NEEDS_OPENAI_KEY" == "true" ]]; then
+  SED_ARGS+=(-e "s/$OPENAI_PLACEHOLDER/$(escape_sed "$OPENAI_API_KEY")/g")
+fi
+
+sed "${SED_ARGS[@]}" "$TEMPLATE" > "$tmp_output"
+
+REMAINING_PLACEHOLDERS="${STORE_ID_PLACEHOLDER}|${CONTENT_REDIS_PLACEHOLDER}|${JOBS_REDIS_PLACEHOLDER}"
+if [[ "$NEEDS_OPENAI_KEY" == "true" ]]; then
+  REMAINING_PLACEHOLDERS="${REMAINING_PLACEHOLDERS}|${OPENAI_PLACEHOLDER}"
+fi
+if grep -qE "$REMAINING_PLACEHOLDERS" "$tmp_output"; then
   echo "Rendered config still contains a template placeholder" >&2
   exit 1
 fi

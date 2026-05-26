@@ -58,3 +58,23 @@ output "aks_oidc_issuer_url" {
   description = "OIDC issuer URL for the AKS cluster (used by the federated identity credential)."
   value       = azurerm_kubernetes_cluster.aks.oidc_issuer_url
 }
+
+output "acr_name" {
+  description = "Short name of the Azure Container Registry."
+  value       = azurerm_container_registry.acr.name
+}
+
+output "acr_login_server" {
+  description = "Fully-qualified login server for the ACR (e.g. ramaoai.azurecr.io). Use as the image registry prefix when building/pushing."
+  value       = azurerm_container_registry.acr.login_server
+}
+
+output "canary_namespace" {
+  description = "Kubernetes namespace the canary deploys into."
+  value       = var.canary_namespace
+}
+
+output "canary_service_account_name" {
+  description = "Name of the canary ServiceAccount (federated to the RAM UAMI)."
+  value       = var.canary_service_account_name
+}

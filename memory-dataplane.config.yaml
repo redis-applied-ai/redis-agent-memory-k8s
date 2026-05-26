@@ -43,10 +43,13 @@ metadata:
 
 embedders_connection_details:
   openai:
-    base_url: https://api.openai.com
+    base_url: https://ram-aoai.openai.azure.com
+    azure:
+      api_version: "2024-06-01"
     credentials:
-      type: static
-      api_key: REPLACE_WITH_OPENAI_API_KEY
+      type: entra
+      entra:
+        mode: default
 
 dataplane_client:
   base_url: http://redis-agent-memory:9000
@@ -67,12 +70,15 @@ promote_working_memory:
   llm:
     provider: openai
     endpoint:
-      base_url: https://api.openai.com/v1
+      base_url: https://ram-aoai.openai.azure.com
       timeout: 60s
       auth_format: bearer
+      azure:
+        api_version: "2024-06-01"
     credentials:
-      type: static
-      api_key: REPLACE_WITH_OPENAI_API_KEY
+      type: entra
+      entra:
+        mode: default
     models:
       default_chat_model: gpt-4o-mini
     http_client:

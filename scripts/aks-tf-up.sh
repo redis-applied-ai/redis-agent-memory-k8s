@@ -42,6 +42,19 @@ if [[ "$SKIP_PROVISION" != "true" ]]; then
   "${RAM_ROOT}/scripts/aks-tf-credentials.sh"
 fi
 
+# Surface the RAM UAMI client/tenant IDs to downstream scripts so install-ram.sh
+# can annotate the ServiceAccount + label the pod template for Azure Workload
+# Identity. Sourced from terraform outputs; tolerates missing outputs (e.g. when
+# the canary/workload-identity terraform hasn't been applied yet).
+TF_DIR="${RAM_ROOT}/infra/terraform"
+if RAM_IDENTITY_CLIENT_ID="$(terraform -chdir="$TF_DIR" output -raw ram_identity_client_id 2>/dev/null)" && [[ -n "$RAM_IDENTITY_CLIENT_ID" ]]; then
+  export RAM_IDENTITY_CLIENT_ID
+  echo "RAM workload identity client_id: ${RAM_IDENTITY_CLIENT_ID}"
+fi
+if RAM_IDENTITY_TENANT_ID="$(terraform -chdir="$TF_DIR" output -raw ram_identity_tenant_id 2>/dev/null)" && [[ -n "$RAM_IDENTITY_TENANT_ID" ]]; then
+  export RAM_IDENTITY_TENANT_ID
+fi
+
 "${RAM_ROOT}/scripts/deploy-stack.sh"
 
 echo "Applying RAM internal load balancer service..."

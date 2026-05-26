@@ -69,14 +69,31 @@ else
   VERSION_ARGS=()
 fi
 
+# Azure Workload Identity wiring — only applied when the caller supplies the
+# UAMI client/tenant IDs (typically populated from terraform outputs in
+# aks-tf-up.sh). Annotates the ServiceAccount and labels the pod template so
+# the workload-identity webhook injects the federated token volume.
+WI_ARGS=()
+if [[ -n "${RAM_IDENTITY_CLIENT_ID:-}" ]]; then
+  WI_ARGS+=(--set "serviceAccount.annotations.azure\.workload\.identity/client-id=${RAM_IDENTITY_CLIENT_ID}")
+fi
+if [[ -n "${RAM_IDENTITY_TENANT_ID:-}" ]]; then
+  WI_ARGS+=(--set "serviceAccount.annotations.azure\.workload\.identity/tenant-id=${RAM_IDENTITY_TENANT_ID}")
+fi
+if [[ -n "${RAM_IDENTITY_CLIENT_ID:-}" ]]; then
+  WI_ARGS+=(--set-string "podLabels.azure\.workload\.identity/use=true")
+fi
+
 helm upgrade --install "$RELEASE" "$CHART" \
   "${VERSION_ARGS[@]}" \
   -n "$NAMESPACE" \
   -f "$VALUES" \
   --set image.repository="$IMAGE_REPOSITORY" \
   --set image.tag="$IMAGE_TAG" \
+  --set image.pullPolicy="${RAM_IMAGE_PULL_POLICY:-Always}" \
   --set license.existingSecretChecksum="$LICENSE_CHECKSUM" \
   --set config.existingSecretChecksum="$CONFIG_CHECKSUM" \
+  "${WI_ARGS[@]}" \
   --atomic \
   --timeout "$TIMEOUT"
 
