@@ -1,12 +1,13 @@
 # Redis Agent Memory Enterprise Harness
 
-This harness runs Redis Agent Memory (RAM) on Kubernetes using Redis Enterprise for Kubernetes. It supports three environments selected via `ENV=`:
+This harness runs Redis Agent Memory (RAM) on Kubernetes using Redis Enterprise for Kubernetes. It supports four environments selected via `ENV=`:
 
 | `ENV=` | Cluster | Provisioner | Use |
 |--------|---------|-------------|-----|
 | `local` (default) | kind (local Docker) | — | Day-to-day development |
 | `aks-tf` | Azure Kubernetes Service | Terraform (**preferred**) | Cloud validation, load testing, demos |
 | `aks` | Azure Kubernetes Service | Bicep | Legacy; use `aks-tf` for new deployments |
+| `eks` | AWS Elastic Kubernetes Service | Terraform | Cross-cloud POC: RAM on EKS, Azure OpenAI via Entra |
 
 All `make` targets that create or destroy infrastructure accept `ENV=`. Installation, smoke tests, and load tests are cluster-agnostic and work without an `ENV` flag once the cluster is running.
 
@@ -300,6 +301,13 @@ AKS — Terraform (preferred):
 - [scripts/aks-tf-delete.sh](./scripts/aks-tf-delete.sh): `terraform destroy`.
 - [scripts/aks-loadtest.sh](./scripts/aks-loadtest.sh): run Locust from the load test VM against the internal load balancer.
 
+AWS EKS (cross-cloud, Azure OpenAI via Entra):
+- [scripts/eks-up.sh](./scripts/eks-up.sh): provision via Terraform + fetch credentials + add Azure fed-cred + install azure-wi webhook + deploy-stack.
+- [scripts/eks-provision.sh](./scripts/eks-provision.sh): `terraform init && apply` in `infra/terraform-eks/` (or `plan` with `--what-if`).
+- [scripts/eks-credentials.sh](./scripts/eks-credentials.sh): `aws eks update-kubeconfig`.
+- [scripts/eks-down.sh](./scripts/eks-down.sh): uninstall RAM and Redis Enterprise from EKS.
+- [scripts/eks-delete.sh](./scripts/eks-delete.sh): `terraform destroy` (EKS + the EKS federated credential only).
+
 AKS — Bicep (legacy):
 - [scripts/aks-up.sh](./scripts/aks-up.sh): provision via Bicep + fetch credentials + deploy-stack + ILB.
 - [scripts/aks-provision.sh](./scripts/aks-provision.sh): create resource group, deploy Bicep, set up VNet peering.
@@ -402,9 +410,42 @@ make delete ENV=aks
 az group show --name ram-aks-rg --query properties.provisioningState -o tsv
 ```
 
+### AWS EKS (ENV=eks)
+
+Uninstall RAM and Redis Enterprise (cluster remains):
+
+```sh
+make down ENV=eks
+```
+
+Destroy the EKS cluster and remove the EKS federated credential from the UAMI (the Azure UAMI, AOAI account, and any AKS deployment are left untouched):
+
+```sh
+make delete ENV=eks
+```
+
+## AWS EKS with Azure OpenAI (ENV=eks)
+
+`ENV=eks` is a cross-cloud POC: RAM runs on an EKS cluster but keeps **Azure OpenAI** as the embedding/LLM provider, authenticated via **Entra workload identity — no API key**. It reuses the User-Assigned Managed Identity created by `ENV=aks-tf` and adds a second federated credential that trusts the EKS OIDC issuer. AKS and EKS can both be deployed against the same identity; run one at a time.
+
+How the secretless auth works on EKS:
+
+- AKS provides the Azure Workload Identity mutating webhook natively; EKS does not. `eks-up.sh` installs the vendor-neutral [`azure-workload-identity`](https://azure.github.io/azure-workload-identity/) webhook chart, so the same ServiceAccount annotation + pod label that `install-ram.sh` already sets triggers injection of the `AZURE_*` env vars and a projected token (audience `api://AzureADTokenExchange`).
+- `infra/terraform-eks/` adds an `azurerm_federated_identity_credential` on the existing `ram-aoai-identity` UAMI with `issuer = <EKS OIDC issuer>` and `subject = system:serviceaccount:ram:redis-agent-memory`. The EKS OIDC discovery/JWKS endpoint is public, so Entra can validate the token.
+- The RAM config (`memory-dataplane.config.yaml`, `credentials.type: entra`, `base_url: https://ram-aoai.openai.azure.com`) and the shared install scripts are unchanged.
+
+Prerequisites: AWS CLI authenticated (rights for EKS/IAM/EC2), `az login` with rights on `AZURE_RESOURCE_GROUP` (to read the UAMI and add the credential), Terraform >= 1.5, and the `ENV=aks-tf` UAMI already provisioned.
+
+```sh
+cp env/ram.eks.env.example .env   # adjust EKS_* + AZURE_RESOURCE_GROUP / RAM_IDENTITY_NAME
+make up ENV=eks                    # provision EKS, add fed-cred, install webhook + RE + RAM
+make port-forward
+make smoke                         # or the long-term-memory create/search path
+```
+
 ## Adding New Environments
 
-The `ENV=` pattern is designed to extend. To add GKE, EKS, or another environment:
+The `ENV=` pattern is designed to extend. `ENV=eks` (see `infra/terraform-eks/` and `scripts/eks-*.sh`) is a worked example of adding a new cloud. To add GKE or another environment:
 
 1. Add `infra/<env>/` with the infrastructure-as-code for that provider.
 2. Add `scripts/<env>-provision.sh`, `<env>-credentials.sh`, `<env>-up.sh`, `<env>-down.sh`, `<env>-delete.sh`.

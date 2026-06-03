@@ -9,6 +9,6 @@ __pycache__/
 .venv/
 .azure/
 .terraform/
-*.tfstate
-*.tfstate.backup
+*.tfstate*
 infra/terraform/backend.hcl
+infra/terraform-eks/backend.hcl
