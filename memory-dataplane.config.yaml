@@ -43,10 +43,15 @@ metadata:
 
 embedders_connection_details:
   openai:
-    base_url: https://api.openai.com
+    base_url: https://ram-aoai.openai.azure.com
+    azure:
+      api_version: "2024-06-01"
     credentials:
-      type: static
-      api_key: REPLACE_WITH_OPENAI_API_KEY
+      type: cloud_identity
+      cloud_identity:
+        provider: entra
+        entra:
+          mode: workload-identity
 
 dataplane_client:
   base_url: http://redis-agent-memory:9000
@@ -58,24 +63,51 @@ dataplane_client:
     timeout: 30s
     max_retry_attempts: 3
 
-promote_working_memory:
+promote_session_memory:
+  # Renamed from promote_working_memory in this build. The promotion LLM is now
+  # configured per-strategy under strategies.<name>.llm (no single top-level llm).
   strategies:
     summary:
       promotion_deduplication_window: 5m
+      llm:
+        provider: openai
+        endpoint:
+          base_url: https://ram-aoai.openai.azure.com
+          timeout: 60s
+          auth_format: bearer
+          azure:
+            api_version: "2024-06-01"
+        credentials:
+          type: cloud_identity
+          cloud_identity:
+            provider: entra
+            entra:
+              mode: workload-identity
+        models:
+          default_chat_model: gpt-4o-mini
+        http_client:
+          skip_verify: false
+          timeout: 60s
+          max_retry_attempts: 3
     instruct:
       promotion_deduplication_window: 5m
-  llm:
-    provider: openai
-    endpoint:
-      base_url: https://api.openai.com/v1
-      timeout: 60s
-      auth_format: bearer
-    credentials:
-      type: static
-      api_key: REPLACE_WITH_OPENAI_API_KEY
-    models:
-      default_chat_model: gpt-4o-mini
-    http_client:
-      skip_verify: false
-      timeout: 60s
-      max_retry_attempts: 3
+      llm:
+        provider: openai
+        endpoint:
+          base_url: https://ram-aoai.openai.azure.com
+          timeout: 60s
+          auth_format: bearer
+          azure:
+            api_version: "2024-06-01"
+        credentials:
+          type: cloud_identity
+          cloud_identity:
+            provider: entra
+            entra:
+              mode: workload-identity
+        models:
+          default_chat_model: gpt-4o-mini
+        http_client:
+          skip_verify: false
+          timeout: 60s
+          max_retry_attempts: 3

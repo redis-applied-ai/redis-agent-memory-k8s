@@ -1,0 +1,59 @@
+license:
+  existingSecret: ram-license
+
+config:
+  existingSecret: ram-config
+
+# Pull the RAM image from the private Azure Container Registry. The referenced
+# Secret is created by eks-up.sh from ACR_PULL_* in .env (scoped ACR pull token).
+imagePullSecrets:
+  - name: acr-pull
+
+service:
+  type: ClusterIP
+
+serviceAccount:
+  create: true
+  automount: false
+
+# POC sizing: 1 server + 1 worker, autoscaling off. Redis Enterprise reserves
+# 2 vCPU/node on the 3x m5.xlarge node group, so keep RAM's footprint small.
+server:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+worker:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+tests:
+  enabled: false

@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: REPLACE_WITH_NAMESPACE
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: REPLACE_WITH_SERVICE_ACCOUNT
+  namespace: REPLACE_WITH_NAMESPACE
+  annotations:
+    azure.workload.identity/client-id: "REPLACE_WITH_CLIENT_ID"
+    azure.workload.identity/tenant-id: "REPLACE_WITH_TENANT_ID"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aoai-entra-canary
+  namespace: REPLACE_WITH_NAMESPACE
+  labels:
+    app: aoai-entra-canary
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aoai-entra-canary
+  template:
+    metadata:
+      labels:
+        app: aoai-entra-canary
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: REPLACE_WITH_SERVICE_ACCOUNT
+      containers:
+        - name: canary
+          image: REPLACE_WITH_IMAGE
+          imagePullPolicy: Always
+          env:
+            - name: AZURE_OPENAI_ENDPOINT
+              value: "REPLACE_WITH_AOAI_ENDPOINT"
+            - name: AZURE_OPENAI_EMBEDDING_DEPLOYMENT
+              value: "REPLACE_WITH_EMBED_DEPLOYMENT"
+            - name: AZURE_OPENAI_API_VERSION
+              value: "2024-06-01"
+            - name: INTERVAL_SECONDS
+              value: "10"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            capabilities:
+              drop:
+                - ALL
